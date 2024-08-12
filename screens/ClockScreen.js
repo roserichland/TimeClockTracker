@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Button, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -126,16 +126,29 @@ const ClockScreen = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Clock</Text>
-      <Text style={styles.earnings}>Earned: ${earnings.toFixed(2)}</Text>
+      <View style={styles.earningsBox}>
+        <Text style={styles.earnings}>Earned: ${earnings.toFixed(2)}</Text>
+      </View>
       <Text style={styles.time}>{formatTime(elapsedTime)}</Text>
 
-      <Button
-        title={isActive ? "Stop" : "Start"}
-        onPress={isActive ? handleStop : handleStart}
-        color={isActive ? "red" : "#4a90e2"}
-      />
-      <Button title="Save" onPress={handleSave} color="green" />
-      <Button title="Clear" onPress={handleClear} color="grey" />
+      <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={[
+            styles.button,
+            isActive ? styles.buttonActive : styles.buttonStart,
+          ]}
+          onPress={isActive ? handleStop : handleStart}
+        >
+          <Text style={styles.buttonText}>{isActive ? "Stop" : "Start"}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={handleSave}>
+          <Text style={styles.buttonText}>Save</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={handleClear}>
+          <Text style={styles.buttonText}>Clear</Text>
+        </TouchableOpacity>
+      </View>
+
       <Text style={styles.total}>
         Total Hours Today: {dailyTotals.totalHours.toFixed(2)}h
       </Text>
@@ -162,10 +175,43 @@ const styles = StyleSheet.create({
     fontSize: 38,
     marginBottom: 20,
   },
+  earningsBox: {
+    backgroundColor: "#f8f9fa",
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5, // For Android shadow
+  },
   earnings: {
     fontSize: 52,
-    marginBottom: 20,
     color: "green",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    paddingHorizontal: 20, // Match the horizontal padding to align with the earnings box
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: "#4a90e2",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginHorizontal: 5,
+    alignItems: "center",
+    elevation: 2, // For Android shadow
+  },
+  buttonActive: {
+    backgroundColor: "red",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 18,
   },
   total: {
     fontSize: 20,
