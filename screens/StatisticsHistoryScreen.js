@@ -11,6 +11,7 @@ import {
   TextInput,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect } from "@react-navigation/native";
 
 const StatisticsHistoryScreen = () => {
@@ -18,10 +19,11 @@ const StatisticsHistoryScreen = () => {
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [newEntryDate, setNewEntryDate] = useState("");
+  const [newEntryDate, setNewEntryDate] = useState(new Date());
   const [newEntryEarnings, setNewEntryEarnings] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
-  // Fetch data whenever the screen is focused
   useFocusEffect(
     useCallback(() => {
       fetchData();
@@ -54,7 +56,7 @@ const StatisticsHistoryScreen = () => {
 
   const handleEntryPress = (entry) => {
     setSelectedEntry(entry);
-    setNewEntryDate(entry.date);
+    setNewEntryDate(new Date(entry.date));
     setNewEntryEarnings(entry.totalEarnings.toString());
     setIsEditing(true);
     setModalVisible(true);
@@ -64,8 +66,9 @@ const StatisticsHistoryScreen = () => {
     setSelectedEntry(null);
     setModalVisible(false);
     setIsEditing(false);
-    setNewEntryDate("");
     setNewEntryEarnings("");
+    setShowDatePicker(false);
+    setShowTimePicker(false);
   };
 
   const handleDelete = async () => {
@@ -133,17 +136,23 @@ const StatisticsHistoryScreen = () => {
       return;
     }
 
+    const formattedDate = newEntryDate.toISOString().split("T")[0];
     try {
-      const key = `dailyTotals_${newEntryDate}`;
-      const existingEntry = await AsyncStorage.getItem(key);
-      const updatedEarnings = existingEntry
-        ? JSON.parse(existingEntry).totalEarnings + parseFloat(newEntryEarnings)
-        : parseFloat(newEntryEarnings);
+      const key = `dailyTotals_${formattedDate}`;
+      if (isEditing) {
+        // Update existing entry
+        await AsyncStorage.setItem(
+          key,
+          JSON.stringify({ totalEarnings: parseFloat(newEntryEarnings) })
+        );
+      } else {
+        // Add new entry
+        await AsyncStorage.setItem(
+          key,
+          JSON.stringify({ totalEarnings: parseFloat(newEntryEarnings) })
+        );
+      }
 
-      await AsyncStorage.setItem(
-        key,
-        JSON.stringify({ totalEarnings: updatedEarnings })
-      );
       fetchData(); // Fetch updated entries and refresh state
       handleCloseModal();
     } catch (error) {
@@ -173,6 +182,7 @@ const StatisticsHistoryScreen = () => {
             title="Add Entry"
             onPress={() => {
               setIsEditing(false);
+              setNewEntryDate(new Date()); // Set date to current date for new entries
               setModalVisible(true);
             }}
           />
@@ -191,12 +201,49 @@ const StatisticsHistoryScreen = () => {
             <Text style={styles.modalTitle}>
               {isEditing ? "Edit Entry" : "Add New Entry"}
             </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Date (YYYY-MM-DD)"
-              value={newEntryDate}
-              onChangeText={setNewEntryDate}
+            <Text>Date: {newEntryDate.toDateString()}</Text>
+            <Text>Time: {newEntryDate.toTimeString().slice(0, 5)}</Text>
+            <Button
+              title="Select Date"
+              onPress={() => setShowDatePicker(true)}
             />
+            <Button
+              title="Select Time"
+              onPress={() => setShowTimePicker(true)}
+            />
+            {showDatePicker && (
+              <DateTimePicker
+                value={newEntryDate}
+                mode="date"
+                display="default"
+                onChange={(event, date) => {
+                  setShowDatePicker(false);
+                  if (date) {
+                    const updatedDate = new Date(newEntryDate);
+                    updatedDate.setFullYear(date.getFullYear());
+                    updatedDate.setMonth(date.getMonth());
+                    updatedDate.setDate(date.getDate());
+                    setNewEntryDate(updatedDate);
+                  }
+                }}
+              />
+            )}
+            {showTimePicker && (
+              <DateTimePicker
+                value={newEntryDate}
+                mode="time"
+                display="default"
+                onChange={(event, time) => {
+                  setShowTimePicker(false);
+                  if (time) {
+                    const updatedDate = new Date(newEntryDate);
+                    updatedDate.setHours(time.getHours());
+                    updatedDate.setMinutes(time.getMinutes());
+                    setNewEntryDate(updatedDate);
+                  }
+                }}
+              />
+            )}
             <TextInput
               style={styles.input}
               placeholder="Total Earnings"
@@ -266,7 +313,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
-    marginTop: 20,
+    marginTop: 10,
   },
 });
 
