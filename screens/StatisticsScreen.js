@@ -15,6 +15,8 @@ const StatisticsScreen = () => {
     ],
   });
 
+  const [showValues, setShowValues] = useState(false); // Initialize as false
+
   const loadData = async () => {
     try {
       const labels = [];
@@ -35,16 +37,25 @@ const StatisticsScreen = () => {
         dataPoints.push(totals.totalEarnings);
       }
 
+      // Round data points to two decimal places
+      const roundedDataPoints = dataPoints.map((point) =>
+        parseFloat(point.toFixed(2))
+      );
+
       const chartData = {
         labels,
         datasets: [
           {
-            data: dataPoints,
+            data: roundedDataPoints,
           },
         ],
       };
 
       setData(chartData);
+
+      // Set showValues to true only if all totals are greater than 0.01
+      const shouldShowValues = roundedDataPoints.every((point) => point > 0.01);
+      setShowValues(shouldShowValues);
     } catch (error) {
       console.error("Failed to load data", error);
     }
@@ -62,6 +73,11 @@ const StatisticsScreen = () => {
         width={screenWidth - 30}
         height={220}
         yAxisLabel="$"
+        fromZero={true}
+        showBarTops={false} // Hide bar tops
+        showValuesOnTopOfBars={true}
+        horizontalLabelRotation={0}
+        verticalLabelRotation={-45} // Rotate horizontal labels by 45 degrees
         chartConfig={{
           backgroundColor: "#fff",
           backgroundGradientFrom: "#fff",
@@ -83,13 +99,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#fff",
   },
+  chartWrapper: {
+    width: screenWidth - 30,
+    paddingBottom: 30, // Adjust this value as needed to move the labels down
+  },
   title: {
     fontSize: 24,
     marginBottom: 20,
   },
   chart: {
     marginVertical: 8,
-    borderRadius: 16,
   },
 });
 
