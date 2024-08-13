@@ -23,72 +23,110 @@ const StatisticsScreen = () => {
   });
 
   const [showValues, setShowValues] = useState(false);
-  const [chartType, setChartType] = useState("weekly"); // "weekly" or "monthly"
+  const [chartType, setChartType] = useState("daily");
 
   const loadData = async () => {
     try {
       const labels = [];
       const dataPoints = [];
       const today = new Date();
-      let startDate, endDate;
+      const roundedDataPoints = [];
 
-      if (chartType === "weekly") {
-        // Weekly data
-        startDate = new Date(today);
+      if (chartType === "daily") {
+        const key = `dailyTotals_${today.toISOString().split("T")[0]}`;
+        const storedTotals = await AsyncStorage.getItem(key);
+        const totals = storedTotals
+          ? JSON.parse(storedTotals)
+          : { totalEarnings: 0 };
+
+        labels.push(today.toLocaleDateString());
+        dataPoints.push(totals.totalEarnings);
+      } else if (chartType === "weekly") {
+        const startDate = new Date(today);
         startDate.setDate(today.getDate() - today.getDay()); // Start of the week
-        endDate = new Date(today);
+        const endDate = new Date(today);
         endDate.setDate(today.getDate() - today.getDay() + 6); // End of the week
 
-        for (let i = 0; i < 7; i++) {
-          const date = new Date(startDate);
-          date.setDate(startDate.getDate() + i);
-          const key = `dailyTotals_${date.toISOString().split("T")[0]}`;
-          const storedTotals = await AsyncStorage.getItem(key);
-          const totals = storedTotals
-            ? JSON.parse(storedTotals)
-            : { totalEarnings: 0 };
+        while (startDate <= endDate) {
+          try {
+            const key = `dailyTotals_${startDate.toISOString().split("T")[0]}`;
+            const storedTotals = await AsyncStorage.getItem(key);
+            const totals = storedTotals
+              ? JSON.parse(storedTotals)
+              : { totalEarnings: 0 };
 
-          labels.push(date.toLocaleDateString());
-          dataPoints.push(totals.totalEarnings);
+            labels.push(startDate.toLocaleDateString());
+            dataPoints.push(totals.totalEarnings);
+          } catch (error) {
+            console.error(
+              `Error fetching data for ${
+                startDate.toISOString().split("T")[0]
+              }`,
+              error
+            );
+          }
+          startDate.setDate(startDate.getDate() + 1);
         }
-      } else {
-        // Monthly data
+
+        // Aggregate data by week
+        const weekLabels = [];
+        const weekDataPoints = [];
+        for (let i = 0; i < dataPoints.length; i += 7) {
+          const weekData = dataPoints.slice(i, i + 7);
+          weekLabels.push(`Week ${Math.floor(i / 7) + 1}`);
+          weekDataPoints.push(weekData.reduce((a, b) => a + b, 0));
+        }
+
+        labels.length = 0;
+        dataPoints.length = 0;
+        labels.push(...weekLabels);
+        dataPoints.push(...weekDataPoints);
+      } else if (chartType === "monthly") {
         const year = today.getFullYear();
-        const month = today.getMonth(); // 0-based index (0 = January, 11 = December)
-        const daysInMonth = new Date(year, month + 1, 0).getDate(); // Number of days in the month
+        const month = today.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const monthLabels = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
+        const monthDataPoints = [0, 0, 0, 0, 0];
 
         for (let day = 1; day <= daysInMonth; day++) {
           const date = new Date(year, month, day);
-          const key = `dailyTotals_${date.toISOString().split("T")[0]}`;
-          const storedTotals = await AsyncStorage.getItem(key);
-          const totals = storedTotals
-            ? JSON.parse(storedTotals)
-            : { totalEarnings: 0 };
+          try {
+            const key = `dailyTotals_${date.toISOString().split("T")[0]}`;
+            const storedTotals = await AsyncStorage.getItem(key);
+            const totals = storedTotals
+              ? JSON.parse(storedTotals)
+              : { totalEarnings: 0 };
 
-          labels.push(date.toLocaleDateString("en-US", { day: "numeric" })); // Use day of the month as label
-          dataPoints.push(totals.totalEarnings);
+            const weekIndex = Math.floor((day - 1) / 7);
+            monthDataPoints[weekIndex] += totals.totalEarnings;
+          } catch (error) {
+            console.error(
+              `Error fetching data for ${date.toISOString().split("T")[0]}`,
+              error
+            );
+          }
         }
-      }
 
-      // Round data points to two decimal places
-      const roundedDataPoints = dataPoints.map((point) =>
-        parseFloat(point.toFixed(2))
-      );
+        labels.length = 0;
+        dataPoints.length = 0;
+        labels.push(...monthLabels);
+        dataPoints.push(...monthDataPoints);
+      }
 
       const chartData = {
         labels,
         datasets: [
           {
-            data: roundedDataPoints,
+            data: roundedDataPoints.length
+              ? roundedDataPoints
+              : dataPoints.map((point) => parseFloat(point.toFixed(2))),
           },
         ],
       };
 
       setData(chartData);
-
-      // Set showValues to true only if all totals are greater than 0.01
-      const shouldShowValues = roundedDataPoints.every((point) => point > 0.01);
-      setShowValues(shouldShowValues);
+      setShowValues(dataPoints.every((point) => point > 0.01));
     } catch (error) {
       console.error("Failed to load data", error);
     }
@@ -96,14 +134,23 @@ const StatisticsScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      loadData(); // Load data when component mounts or when navigated to
-    }, [chartType]) // Reload data when chartType changes
+      loadData();
+    }, [chartType])
   );
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Statistics</Text>
       <View style={styles.buttonRow}>
+        <TouchableOpacity
+          style={[
+            styles.button,
+            chartType === "daily" ? styles.buttonActive : {},
+          ]}
+          onPress={() => setChartType("daily")}
+        >
+          <Text style={styles.buttonText}>Daily</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.button,
@@ -175,7 +222,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonActive: {
-    backgroundColor: "#003366", // Active button color
+    backgroundColor: "#003366",
   },
   buttonText: {
     color: "white",
