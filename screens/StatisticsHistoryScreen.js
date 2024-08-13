@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,10 +12,9 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 
-const StatisticsHistoryScreen = () => {
+const StatisticsHistoryScreen = ({ navigation }) => {
   const [entries, setEntries] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
 
   // Fetch data whenever the screen is focused
   useFocusEffect(
@@ -50,7 +49,6 @@ const StatisticsHistoryScreen = () => {
 
   const handleEntryPress = (entry) => {
     setSelectedEntry(entry);
-    setIsEditing(false);
   };
 
   const handleCloseModal = () => {

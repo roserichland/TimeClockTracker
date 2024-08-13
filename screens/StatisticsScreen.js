@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, Text, StyleSheet, Dimensions } from "react-native";
 import { BarChart } from "react-native-chart-kit";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -61,9 +62,11 @@ const StatisticsScreen = () => {
     }
   };
 
-  useEffect(() => {
-    loadData(); // Load data when component mounts
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData(); // Load data when component mounts or when navigated to
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -75,7 +78,7 @@ const StatisticsScreen = () => {
         yAxisLabel="$"
         fromZero={true}
         showBarTops={false} // Hide bar tops
-        showValuesOnTopOfBars={true}
+        showValuesOnTopOfBars={showValues}
         horizontalLabelRotation={0}
         verticalLabelRotation={-45} // Rotate horizontal labels by 45 degrees
         chartConfig={{
@@ -98,10 +101,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#fff",
-  },
-  chartWrapper: {
-    width: screenWidth - 30,
-    paddingBottom: 30, // Adjust this value as needed to move the labels down
   },
   title: {
     fontSize: 24,
