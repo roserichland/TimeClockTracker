@@ -17,7 +17,14 @@ const ClockScreen = () => {
     try {
       const storedWage = await AsyncStorage.getItem("hourlyWage");
       const wage = storedWage ? parseFloat(storedWage) : 20; // Default if not set
-      setHourlyWage(wage);
+      if (isNaN(wage)) {
+        console.warn(
+          "Loaded hourly wage is not a valid number. Using default."
+        );
+        setHourlyWage(20); // Default if invalid
+      } else {
+        setHourlyWage(wage);
+      }
       console.log(`Loaded hourly wage: $${wage.toFixed(2)}`);
 
       const today = new Date().toISOString().split("T")[0];
@@ -25,7 +32,16 @@ const ClockScreen = () => {
       const todaysTotals = storedTotals
         ? JSON.parse(storedTotals)
         : { totalHours: 0, totalEarnings: 0 };
-      setDailyTotals(todaysTotals);
+      setDailyTotals({
+        totalHours:
+          typeof todaysTotals.totalHours === "number"
+            ? todaysTotals.totalHours
+            : 0,
+        totalEarnings:
+          typeof todaysTotals.totalEarnings === "number"
+            ? todaysTotals.totalEarnings
+            : 0,
+      });
     } catch (error) {
       console.error("Failed to load settings", error);
     }
@@ -78,13 +94,16 @@ const ClockScreen = () => {
       JSON.stringify(updatedTotals)
     );
 
-    setDailyTotals(updatedTotals);
+    setDailyTotals({
+      totalHours: updatedTotals.totalHours,
+      totalEarnings: updatedTotals.totalEarnings,
+    });
 
     Alert.alert(
       "Saved",
       `Total Hours: ${updatedTotals.totalHours.toFixed(
         2
-      )}, Total Earnings: $${updatedTotals.totalEarnings.toFixed(2)}`
+      )}h, Total Earnings: $${updatedTotals.totalEarnings.toFixed(2)}`
     );
 
     console.log(`Hours saved: ${hoursElapsed.toFixed(2)}`);
@@ -121,7 +140,16 @@ const ClockScreen = () => {
     )}ms`;
   };
 
-  const earnings = (elapsedTime / 3600000) * hourlyWage;
+  // Handle potential NaN values for earnings and daily totals
+  const earnings = !isNaN((elapsedTime / 3600000) * hourlyWage)
+    ? (elapsedTime / 3600000) * hourlyWage
+    : 0;
+  const totalHoursToday = !isNaN(dailyTotals.totalHours)
+    ? dailyTotals.totalHours
+    : 0;
+  const totalEarningsToday = !isNaN(dailyTotals.totalEarnings)
+    ? dailyTotals.totalEarnings
+    : 0;
 
   return (
     <View style={styles.container}>
@@ -150,10 +178,10 @@ const ClockScreen = () => {
       </View>
 
       <Text style={styles.total}>
-        Total Hours Today: {dailyTotals.totalHours.toFixed(2)}h
+        Total Hours Today: {totalHoursToday.toFixed(2)}h
       </Text>
       <Text style={styles.total}>
-        Total Earnings Today: ${dailyTotals.totalEarnings.toFixed(2)}
+        Total Earnings Today: ${totalEarningsToday.toFixed(2)}
       </Text>
     </View>
   );

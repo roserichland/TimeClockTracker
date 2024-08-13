@@ -57,7 +57,7 @@ const StatisticsHistoryScreen = () => {
   const handleEntryPress = (entry) => {
     setSelectedEntry(entry);
     setNewEntryDate(new Date(entry.date));
-    setNewEntryEarnings(entry.totalEarnings.toString());
+    setNewEntryEarnings(entry.totalEarnings.toFixed(2)); // Ensure toFixed is used for consistency
     setIsEditing(true);
     setModalVisible(true);
   };
@@ -127,11 +127,8 @@ const StatisticsHistoryScreen = () => {
   };
 
   const handleAddOrEditEntry = async () => {
-    if (
-      !newEntryDate ||
-      isNaN(parseFloat(newEntryEarnings)) ||
-      parseFloat(newEntryEarnings) <= 0
-    ) {
+    const earningsValue = parseFloat(newEntryEarnings);
+    if (!newEntryDate || isNaN(earningsValue) || earningsValue < 0) {
       Alert.alert("Invalid Input", "Please enter valid date and earnings.");
       return;
     }
@@ -139,19 +136,10 @@ const StatisticsHistoryScreen = () => {
     const formattedDate = newEntryDate.toISOString().split("T")[0];
     try {
       const key = `dailyTotals_${formattedDate}`;
-      if (isEditing) {
-        // Update existing entry
-        await AsyncStorage.setItem(
-          key,
-          JSON.stringify({ totalEarnings: parseFloat(newEntryEarnings) })
-        );
-      } else {
-        // Add new entry
-        await AsyncStorage.setItem(
-          key,
-          JSON.stringify({ totalEarnings: parseFloat(newEntryEarnings) })
-        );
-      }
+      await AsyncStorage.setItem(
+        key,
+        JSON.stringify({ totalEarnings: earningsValue })
+      );
 
       fetchData(); // Fetch updated entries and refresh state
       handleCloseModal();

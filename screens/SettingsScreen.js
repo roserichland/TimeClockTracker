@@ -13,25 +13,29 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useNavigation } from "@react-navigation/native";
 
 const SettingsScreen = () => {
-  const [hourlyWage, setHourlyWage] = useState("");
+  const [hourlyWage, setHourlyWage] = useState(""); // Keep as string for TextInput
   const [dayStart, setDayStart] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const navigation = useNavigation();
 
   const handleSave = async () => {
-    if (hourlyWage === "") {
-      Alert.alert("Error", "Please enter a dollar amount.");
+    // Validate and convert hourlyWage
+    const wage = parseFloat(hourlyWage);
+    if (isNaN(wage) || wage <= 0) {
+      Alert.alert("Error", "Please enter a valid dollar amount.");
       return;
     }
 
     try {
-      await AsyncStorage.setItem("hourlyWage", hourlyWage);
+      await AsyncStorage.setItem("hourlyWage", JSON.stringify(wage)); // Save as number
       await AsyncStorage.setItem("dayStart", dayStart.toISOString());
       Alert.alert(
         "Settings Saved",
-        `Hourly wage: $${hourlyWage}\nDay Start Time: ${formatTime(dayStart)}`
+        `Hourly wage: $${wage.toFixed(2)}\nDay Start Time: ${formatTime(
+          dayStart
+        )}`
       );
-      console.log(`Hourly wage saved: $${hourlyWage}`);
+      console.log(`Hourly wage saved: $${wage.toFixed(2)}`);
 
       // Navigate back to ClockScreen
       navigation.navigate("Clock");
