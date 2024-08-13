@@ -8,13 +8,18 @@ import {
   Modal,
   Button,
   Alert,
+  TextInput,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 
-const StatisticsHistoryScreen = ({ navigation }) => {
+const StatisticsHistoryScreen = () => {
   const [entries, setEntries] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newEntryDate, setNewEntryDate] = useState("");
+  const [newEntryEarnings, setNewEntryEarnings] = useState("");
 
   // Fetch data whenever the screen is focused
   useFocusEffect(
@@ -49,10 +54,12 @@ const StatisticsHistoryScreen = ({ navigation }) => {
 
   const handleEntryPress = (entry) => {
     setSelectedEntry(entry);
+    setIsEditing(false);
   };
 
   const handleCloseModal = () => {
     setSelectedEntry(null);
+    setModalVisible(false);
   };
 
   const handleDelete = async () => {
@@ -110,6 +117,34 @@ const StatisticsHistoryScreen = ({ navigation }) => {
     );
   };
 
+  const handleAddEntry = async () => {
+    if (
+      !newEntryDate ||
+      isNaN(parseFloat(newEntryEarnings)) ||
+      parseFloat(newEntryEarnings) <= 0
+    ) {
+      Alert.alert("Invalid Input", "Please enter valid date and earnings.");
+      return;
+    }
+
+    try {
+      const key = `dailyTotals_${newEntryDate}`;
+      const existingEntry = await AsyncStorage.getItem(key);
+      const updatedEarnings = existingEntry
+        ? JSON.parse(existingEntry).totalEarnings + parseFloat(newEntryEarnings)
+        : parseFloat(newEntryEarnings);
+
+      await AsyncStorage.setItem(
+        key,
+        JSON.stringify({ totalEarnings: updatedEarnings })
+      );
+      fetchData(); // Fetch updated entries and refresh state
+      handleCloseModal();
+    } catch (error) {
+      console.error("Error adding entry:", error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
@@ -128,6 +163,7 @@ const StatisticsHistoryScreen = ({ navigation }) => {
           </TouchableOpacity>
         ))}
         <View style={styles.buttonContainer}>
+          <Button title="Add Entry" onPress={() => setModalVisible(true)} />
           <Button title="Delete All Entries" onPress={handleDeleteAllEntries} />
         </View>
       </ScrollView>
@@ -154,6 +190,36 @@ const StatisticsHistoryScreen = ({ navigation }) => {
           </View>
         </Modal>
       )}
+
+      {/* Modal for Adding a New Entry */}
+      <Modal
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={handleCloseModal}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add New Entry</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Date (YYYY-MM-DD)"
+              value={newEntryDate}
+              onChangeText={setNewEntryDate}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Total Earnings"
+              keyboardType="numeric"
+              value={newEntryEarnings}
+              onChangeText={setNewEntryEarnings}
+            />
+            <View style={styles.buttonContainer}>
+              <Button title="Add Entry" onPress={handleAddEntry} />
+              <Button title="Close" onPress={handleCloseModal} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -188,6 +254,18 @@ const styles = StyleSheet.create({
   },
   modalText: {
     fontSize: 18,
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    marginBottom: 10,
+  },
+  input: {
+    width: "100%",
+    padding: 10,
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 5,
     marginBottom: 10,
   },
   buttonContainer: {
