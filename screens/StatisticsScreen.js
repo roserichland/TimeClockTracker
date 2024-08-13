@@ -31,7 +31,6 @@ const StatisticsScreen = () => {
       const labels = [];
       const dataPoints = [];
       const today = new Date();
-      const roundedDataPoints = [];
 
       if (chartType === "daily") {
         const key = `dailyTotals_${today.toISOString().split("T")[0]}`;
@@ -49,23 +48,15 @@ const StatisticsScreen = () => {
         endDate.setDate(today.getDate() - today.getDay() + 6); // End of the week
 
         while (startDate <= endDate) {
-          try {
-            const key = `dailyTotals_${startDate.toISOString().split("T")[0]}`;
-            const storedTotals = await AsyncStorage.getItem(key);
-            const totals = storedTotals
-              ? JSON.parse(storedTotals)
-              : { totalEarnings: 0 };
+          const key = `dailyTotals_${startDate.toISOString().split("T")[0]}`;
+          const storedTotals = await AsyncStorage.getItem(key);
+          const totals = storedTotals
+            ? JSON.parse(storedTotals)
+            : { totalEarnings: 0 };
 
-            labels.push(startDate.toLocaleDateString());
-            dataPoints.push(totals.totalEarnings);
-          } catch (error) {
-            console.error(
-              `Error fetching data for ${
-                startDate.toISOString().split("T")[0]
-              }`,
-              error
-            );
-          }
+          labels.push(startDate.toLocaleDateString());
+          dataPoints.push(totals.totalEarnings);
+
           startDate.setDate(startDate.getDate() + 1);
         }
 
@@ -80,48 +71,49 @@ const StatisticsScreen = () => {
 
         labels.length = 0;
         dataPoints.length = 0;
-        labels.push(...weekLabels);
-        dataPoints.push(...weekDataPoints);
+        labels.push(...weekLabels.reverse()); // Reverse order for display
+        dataPoints.push(...weekDataPoints.reverse()); // Reverse order for display
       } else if (chartType === "monthly") {
         const year = today.getFullYear();
         const month = today.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-        const monthLabels = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
-        const monthDataPoints = [0, 0, 0, 0, 0];
+        const monthLabels = [];
+        const monthDataPoints = Array.from({ length: 5 }, () => 0); // Initialize for up to 5 weeks
 
         for (let day = 1; day <= daysInMonth; day++) {
           const date = new Date(year, month, day);
-          try {
-            const key = `dailyTotals_${date.toISOString().split("T")[0]}`;
-            const storedTotals = await AsyncStorage.getItem(key);
-            const totals = storedTotals
-              ? JSON.parse(storedTotals)
-              : { totalEarnings: 0 };
+          const key = `dailyTotals_${date.toISOString().split("T")[0]}`;
+          const storedTotals = await AsyncStorage.getItem(key);
+          const totals = storedTotals
+            ? JSON.parse(storedTotals)
+            : { totalEarnings: 0 };
 
-            const weekIndex = Math.floor((day - 1) / 7);
-            monthDataPoints[weekIndex] += totals.totalEarnings;
-          } catch (error) {
-            console.error(
-              `Error fetching data for ${date.toISOString().split("T")[0]}`,
-              error
-            );
-          }
+          const weekIndex = Math.floor((day - 1) / 7);
+          monthDataPoints[weekIndex] += totals.totalEarnings;
+        }
+
+        // Create labels for weeks in the month
+        for (let i = 0; i < monthDataPoints.length; i++) {
+          monthLabels.push(`Week ${i + 1}`);
         }
 
         labels.length = 0;
         dataPoints.length = 0;
-        labels.push(...monthLabels);
-        dataPoints.push(...monthDataPoints);
+        labels.push(...monthLabels.reverse()); // Reverse order for display
+        dataPoints.push(...monthDataPoints.reverse()); // Reverse order for display
       }
+
+      // Round data points to two decimal places
+      const roundedDataPoints = dataPoints.map((point) =>
+        parseFloat(point.toFixed(2))
+      );
 
       const chartData = {
         labels,
         datasets: [
           {
-            data: roundedDataPoints.length
-              ? roundedDataPoints
-              : dataPoints.map((point) => parseFloat(point.toFixed(2))),
+            data: roundedDataPoints,
           },
         ],
       };

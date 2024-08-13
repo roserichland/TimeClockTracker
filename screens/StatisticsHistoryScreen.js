@@ -9,6 +9,7 @@ import {
   Button,
   Alert,
   TextInput,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -33,21 +34,19 @@ const StatisticsHistoryScreen = () => {
   const fetchData = async () => {
     try {
       const keys = await AsyncStorage.getAllKeys();
+      const entryKeys = keys.filter((key) => key.startsWith("clockEntry_"));
+
       const entries = await Promise.all(
-        keys
-          .filter((key) => key.startsWith("dailyTotals_"))
-          .map(async (key) => {
-            const entry = await AsyncStorage.getItem(key);
-            return {
-              date: key.replace("dailyTotals_", ""),
-              totalEarnings: JSON.parse(entry)?.totalEarnings || 0,
-            };
-          })
+        entryKeys.map(async (key) => {
+          const entry = await AsyncStorage.getItem(key);
+          return JSON.parse(entry);
+        })
       );
 
       const sortedEntries = entries.sort(
-        (a, b) => new Date(b.date) - new Date(a.date)
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
       );
+
       setEntries(sortedEntries);
     } catch (error) {
       console.error("Error fetching entries:", error);
@@ -56,8 +55,8 @@ const StatisticsHistoryScreen = () => {
 
   const handleEntryPress = (entry) => {
     setSelectedEntry(entry);
-    setNewEntryDate(new Date(entry.date));
-    setNewEntryEarnings(entry.totalEarnings.toFixed(2)); // Ensure toFixed is used for consistency
+    setNewEntryDate(new Date(entry.timestamp));
+    setNewEntryEarnings(entry.totalEarnings.toFixed(2));
     setIsEditing(true);
     setModalVisible(true);
   };
@@ -84,7 +83,7 @@ const StatisticsHistoryScreen = () => {
             onPress: async () => {
               try {
                 await AsyncStorage.removeItem(
-                  `dailyTotals_${selectedEntry.date}`
+                  `clockEntry_${selectedEntry.timestamp}`
                 );
                 fetchData(); // Fetch updated entries and refresh state
                 handleCloseModal();
@@ -111,10 +110,10 @@ const StatisticsHistoryScreen = () => {
           onPress: async () => {
             try {
               const keys = await AsyncStorage.getAllKeys();
-              const entriesKeys = keys.filter((key) =>
-                key.startsWith("dailyTotals_")
+              const entryKeys = keys.filter((key) =>
+                key.startsWith("clockEntry_")
               );
-              await AsyncStorage.multiRemove(entriesKeys);
+              await AsyncStorage.multiRemove(entryKeys);
               setEntries([]); // Clear all entries
             } catch (error) {
               console.error("Error deleting all entries:", error);
@@ -133,12 +132,18 @@ const StatisticsHistoryScreen = () => {
       return;
     }
 
-    const formattedDate = newEntryDate.toISOString().split("T")[0];
+    const formattedDate = newEntryDate.toISOString();
     try {
-      const key = `dailyTotals_${formattedDate}`;
+      const key = `clockEntry_${
+        selectedEntry ? selectedEntry.timestamp : formattedDate
+      }`;
       await AsyncStorage.setItem(
         key,
-        JSON.stringify({ totalEarnings: earningsValue })
+        JSON.stringify({
+          timestamp: formattedDate,
+          totalHours: selectedEntry ? selectedEntry.totalHours : 0, // For new entries
+          totalEarnings: earningsValue,
+        })
       );
 
       fetchData(); // Fetch updated entries and refresh state
@@ -153,12 +158,12 @@ const StatisticsHistoryScreen = () => {
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}>
         {entries.map((entry) => (
           <TouchableOpacity
-            key={entry.date}
+            key={entry.timestamp} // Ensure each entry has a unique key prop
             onPress={() => handleEntryPress(entry)}
             style={styles.entry}
           >
             <Text style={styles.entryText}>
-              Date: {new Date(entry.date).toDateString()}
+              Date: {new Date(entry.timestamp).toDateString()}
             </Text>
             <Text style={styles.entryText}>
               Total Earnings: ${entry.totalEarnings.toFixed(2)}
@@ -234,21 +239,24 @@ const StatisticsHistoryScreen = () => {
             )}
             <TextInput
               style={styles.input}
-              placeholder="Total Earnings"
               keyboardType="numeric"
+              placeholder="Enter total earnings"
               value={newEntryEarnings}
               onChangeText={setNewEntryEarnings}
             />
             <View style={styles.buttonContainer}>
-              {isEditing ? (
-                <>
-                  <Button title="Save Changes" onPress={handleAddOrEditEntry} />
-                  <Button title="Delete" color="red" onPress={handleDelete} />
-                </>
-              ) : (
-                <Button title="Add Entry" onPress={handleAddOrEditEntry} />
+              <Button
+                title={isEditing ? "Save Changes" : "Add Entry"}
+                onPress={handleAddOrEditEntry}
+              />
+              <Button title="Cancel" onPress={handleCloseModal} />
+              {isEditing && (
+                <Button
+                  title="Delete Entry"
+                  onPress={handleDelete}
+                  color="red"
+                />
               )}
-              <Button title="Close" onPress={handleCloseModal} />
             </View>
           </View>
         </View>
@@ -260,17 +268,22 @@ const StatisticsHistoryScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: "#fff",
+    padding: 16,
   },
   entry: {
-    marginBottom: 15,
-    padding: 10,
-    backgroundColor: "#f9f9f9",
-    borderRadius: 5,
+    padding: 16,
+    marginBottom: 10,
+    backgroundColor: "#f1f1f1",
+    borderRadius: 8,
   },
   entryText: {
-    fontSize: 18,
+    fontSize: 16,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
   },
   modalContainer: {
     flex: 1,
@@ -296,12 +309,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 5,
     marginBottom: 10,
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    marginTop: 10,
   },
 });
 
