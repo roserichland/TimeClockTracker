@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   Dimensions,
+  ScrollView,
   TouchableOpacity,
 } from "react-native";
 import { BarChart } from "react-native-chart-kit";
@@ -170,26 +171,30 @@ const StatisticsScreen = () => {
           <Text style={styles.buttonText}>Monthly</Text>
         </TouchableOpacity>
       </View>
-      <BarChart
-        data={data}
-        width={screenWidth - 30}
-        height={220}
-        yAxisLabel="$"
-        fromZero={true}
-        showBarTops={false}
-        showValuesOnTopOfBars={showValues}
-        horizontalLabelRotation={0}
-        verticalLabelRotation={-45}
-        chartConfig={{
-          backgroundColor: "#fff",
-          backgroundGradientFrom: "#fff",
-          backgroundGradientTo: "#fff",
-          decimalPlaces: 2,
-          color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-          labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-        }}
-        style={styles.chart}
-      />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.chartContainer}>
+          <BarChart
+            data={data}
+            width={Math.max(screenWidth * 1.5, 600)} // Increase width to allow horizontal scrolling
+            height={220}
+            yAxisLabel="$"
+            fromZero={true}
+            showBarTops={false}
+            showValuesOnTopOfBars={showValues}
+            horizontalLabelRotation={0}
+            verticalLabelRotation={-45}
+            chartConfig={{
+              backgroundColor: "#fff",
+              backgroundGradientFrom: "#fff",
+              backgroundGradientTo: "#fff",
+              decimalPlaces: 2,
+              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+            }}
+            style={styles.chart}
+          />
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -205,6 +210,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     marginBottom: 20,
+  },
+  chartContainer: {
+    width: Math.max(screenWidth * 1.5, 600), // Ensure container width is sufficient for horizontal scrolling
   },
   chart: {
     marginVertical: 8,
