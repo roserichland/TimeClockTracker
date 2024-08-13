@@ -54,12 +54,18 @@ const StatisticsHistoryScreen = () => {
 
   const handleEntryPress = (entry) => {
     setSelectedEntry(entry);
-    setIsEditing(false);
+    setNewEntryDate(entry.date);
+    setNewEntryEarnings(entry.totalEarnings.toString());
+    setIsEditing(true);
+    setModalVisible(true);
   };
 
   const handleCloseModal = () => {
     setSelectedEntry(null);
     setModalVisible(false);
+    setIsEditing(false);
+    setNewEntryDate("");
+    setNewEntryEarnings("");
   };
 
   const handleDelete = async () => {
@@ -117,7 +123,7 @@ const StatisticsHistoryScreen = () => {
     );
   };
 
-  const handleAddEntry = async () => {
+  const handleAddOrEditEntry = async () => {
     if (
       !newEntryDate ||
       isNaN(parseFloat(newEntryEarnings)) ||
@@ -141,7 +147,7 @@ const StatisticsHistoryScreen = () => {
       fetchData(); // Fetch updated entries and refresh state
       handleCloseModal();
     } catch (error) {
-      console.error("Error adding entry:", error);
+      console.error("Error adding or editing entry:", error);
     }
   };
 
@@ -163,35 +169,18 @@ const StatisticsHistoryScreen = () => {
           </TouchableOpacity>
         ))}
         <View style={styles.buttonContainer}>
-          <Button title="Add Entry" onPress={() => setModalVisible(true)} />
+          <Button
+            title="Add Entry"
+            onPress={() => {
+              setIsEditing(false);
+              setModalVisible(true);
+            }}
+          />
           <Button title="Delete All Entries" onPress={handleDeleteAllEntries} />
         </View>
       </ScrollView>
 
-      {selectedEntry && (
-        <Modal
-          transparent={true}
-          visible={!!selectedEntry}
-          onRequestClose={handleCloseModal}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalText}>
-                Date: {new Date(selectedEntry.date).toDateString()}
-              </Text>
-              <Text style={styles.modalText}>
-                Total Earnings: ${selectedEntry.totalEarnings.toFixed(2)}
-              </Text>
-              <View style={styles.buttonContainer}>
-                <Button title="Delete" onPress={handleDelete} />
-                <Button title="Close" onPress={handleCloseModal} />
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {/* Modal for Adding a New Entry */}
+      {/* Modal for Editing or Adding an Entry */}
       <Modal
         transparent={true}
         visible={modalVisible}
@@ -199,7 +188,9 @@ const StatisticsHistoryScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add New Entry</Text>
+            <Text style={styles.modalTitle}>
+              {isEditing ? "Edit Entry" : "Add New Entry"}
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Date (YYYY-MM-DD)"
@@ -214,7 +205,14 @@ const StatisticsHistoryScreen = () => {
               onChangeText={setNewEntryEarnings}
             />
             <View style={styles.buttonContainer}>
-              <Button title="Add Entry" onPress={handleAddEntry} />
+              {isEditing ? (
+                <>
+                  <Button title="Save Changes" onPress={handleAddOrEditEntry} />
+                  <Button title="Delete" color="red" onPress={handleDelete} />
+                </>
+              ) : (
+                <Button title="Add Entry" onPress={handleAddOrEditEntry} />
+              )}
               <Button title="Close" onPress={handleCloseModal} />
             </View>
           </View>
@@ -251,10 +249,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
     alignItems: "center",
-  },
-  modalText: {
-    fontSize: 18,
-    marginBottom: 10,
   },
   modalTitle: {
     fontSize: 20,

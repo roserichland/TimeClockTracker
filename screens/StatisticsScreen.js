@@ -78,7 +78,7 @@ const StatisticsScreen = () => {
         yAxisLabel="$"
         fromZero={true}
         showBarTops={false} // Hide bar tops
-        showValuesOnTopOfBars={showValues}
+        showValuesOnTopOfBars={true}
         horizontalLabelRotation={0}
         verticalLabelRotation={-45} // Rotate horizontal labels by 45 degrees
         chartConfig={{
