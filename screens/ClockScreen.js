@@ -8,10 +8,6 @@ const ClockScreen = () => {
   const [startTime, setStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [hourlyWage, setHourlyWage] = useState(20); // Default value
-  const [dailyTotals, setDailyTotals] = useState({
-    totalHours: 0,
-    totalEarnings: 0,
-  });
 
   const loadSettings = async () => {
     try {
@@ -26,22 +22,6 @@ const ClockScreen = () => {
         setHourlyWage(wage);
       }
       console.log(`Loaded hourly wage: $${wage.toFixed(2)}`);
-
-      const today = new Date().toISOString().split("T")[0];
-      const storedTotals = await AsyncStorage.getItem(`dailyTotals_${today}`);
-      const todaysTotals = storedTotals
-        ? JSON.parse(storedTotals)
-        : { totalHours: 0, totalEarnings: 0 };
-      setDailyTotals({
-        totalHours:
-          typeof todaysTotals.totalHours === "number"
-            ? todaysTotals.totalHours
-            : 0,
-        totalEarnings:
-          typeof todaysTotals.totalEarnings === "number"
-            ? todaysTotals.totalEarnings
-            : 0,
-      });
     } catch (error) {
       console.error("Failed to load settings", error);
     }
@@ -78,39 +58,28 @@ const ClockScreen = () => {
     const hoursElapsed = elapsedTime / 3600000;
     const earnings = hoursElapsed * hourlyWage;
 
-    const today = new Date().toISOString().split("T")[0];
-    const storedTotals = await AsyncStorage.getItem(`dailyTotals_${today}`);
-    let dailyTotals = storedTotals
-      ? JSON.parse(storedTotals)
-      : { totalHours: 0, totalEarnings: 0 };
+    const timestamp = new Date().toISOString();
+    const entryKey = `clockEntry_${timestamp}`;
 
-    const updatedTotals = {
-      totalHours: dailyTotals.totalHours + hoursElapsed,
-      totalEarnings: dailyTotals.totalEarnings + earnings,
+    const entry = {
+      timestamp,
+      totalHours: hoursElapsed,
+      totalEarnings: earnings,
     };
 
-    await AsyncStorage.setItem(
-      `dailyTotals_${today}`,
-      JSON.stringify(updatedTotals)
-    );
-
-    setDailyTotals({
-      totalHours: updatedTotals.totalHours,
-      totalEarnings: updatedTotals.totalEarnings,
-    });
-
-    Alert.alert(
-      "Saved",
-      `Total Hours: ${updatedTotals.totalHours.toFixed(
-        2
-      )}h, Total Earnings: $${updatedTotals.totalEarnings.toFixed(2)}`
-    );
-
-    console.log(`Hours saved: ${hoursElapsed.toFixed(2)}`);
-    console.log(`Earnings saved: $${earnings.toFixed(2)}`);
-
-    setElapsedTime(0);
-    setStartTime(Date.now());
+    try {
+      await AsyncStorage.setItem(entryKey, JSON.stringify(entry));
+      Alert.alert(
+        "Saved",
+        `Total Hours: ${hoursElapsed.toFixed(
+          2
+        )}h, Total Earnings: $${earnings.toFixed(2)}`
+      );
+      setElapsedTime(0);
+      setStartTime(Date.now());
+    } catch (error) {
+      console.error("Error saving entry:", error);
+    }
   };
 
   const handleClear = () => {
@@ -140,15 +109,9 @@ const ClockScreen = () => {
     )}ms`;
   };
 
-  // Handle potential NaN values for earnings and daily totals
+  // Handle potential NaN values for earnings
   const earnings = !isNaN((elapsedTime / 3600000) * hourlyWage)
     ? (elapsedTime / 3600000) * hourlyWage
-    : 0;
-  const totalHoursToday = !isNaN(dailyTotals.totalHours)
-    ? dailyTotals.totalHours
-    : 0;
-  const totalEarningsToday = !isNaN(dailyTotals.totalEarnings)
-    ? dailyTotals.totalEarnings
     : 0;
 
   return (
@@ -176,13 +139,6 @@ const ClockScreen = () => {
           <Text style={styles.buttonText}>Clear</Text>
         </TouchableOpacity>
       </View>
-
-      <Text style={styles.total}>
-        Total Hours Today: {totalHoursToday.toFixed(2)}h
-      </Text>
-      <Text style={styles.total}>
-        Total Earnings Today: ${totalEarningsToday.toFixed(2)}
-      </Text>
     </View>
   );
 };
@@ -240,10 +196,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontSize: 18,
-  },
-  total: {
-    fontSize: 20,
-    marginVertical: 10,
   },
 });
 

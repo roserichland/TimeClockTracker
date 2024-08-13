@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -79,7 +79,10 @@ const StatisticsScreen = () => {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
         const monthLabels = [];
-        const monthDataPoints = Array.from({ length: 5 }, () => 0); // Initialize for up to 5 weeks
+        const monthDataPoints = Array.from(
+          { length: Math.ceil(daysInMonth / 7) },
+          () => 0
+        ); // Initialize for up to 5 weeks
 
         for (let day = 1; day <= daysInMonth; day++) {
           const date = new Date(year, month, day);
@@ -118,6 +121,7 @@ const StatisticsScreen = () => {
         ],
       };
 
+      console.log("Chart Data:", chartData); // Log chart data for debugging
       setData(chartData);
       setShowValues(dataPoints.every((point) => point > 0.01));
     } catch (error) {
@@ -167,12 +171,12 @@ const StatisticsScreen = () => {
         <View style={styles.chartContainer}>
           <BarChart
             data={data}
-            width={Math.max(screenWidth * 1.5, 600)} // Increase width to allow horizontal scrolling
+            width={Math.max(screenWidth * 1.5, 600)} // Ensure width for horizontal scrolling
             height={220}
             yAxisLabel="$"
             fromZero={true}
             showBarTops={false}
-            showValuesOnTopOfBars={showValues}
+            showValuesOnTopOfBars={true}
             horizontalLabelRotation={0}
             verticalLabelRotation={-45}
             chartConfig={{
@@ -204,7 +208,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   chartContainer: {
-    width: Math.max(screenWidth * 1.5, 600), // Ensure container width is sufficient for horizontal scrolling
+    width: Math.max(screenWidth * 1.5, 600), // Ensure container width is sufficient
   },
   chart: {
     marginVertical: 8,
