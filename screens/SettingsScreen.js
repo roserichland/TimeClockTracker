@@ -1,3 +1,4 @@
+//tax rate option and calculations (maybe start modularizing)
 import React, { useState } from "react";
 import {
   View,

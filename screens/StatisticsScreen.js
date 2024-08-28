@@ -1,3 +1,6 @@
+//backwards graphs
+//not updating with edits on history screen
+
 import React, { useState, useCallback } from "react";
 import {
   View,
